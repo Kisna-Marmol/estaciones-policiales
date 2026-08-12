@@ -1,0 +1,8 @@
+[
+  { "nombre": "Estación Policial Centro",       "lat": 14.0818, "lon": -87.1921 },
+  { "nombre": "Estación Policial Norte",        "lat": 14.1090, "lon": -87.2060 },
+  { "nombre": "Estación Policial Sur",          "lat": 14.0520, "lon": -87.2100 },
+  { "nombre": "Estación Policial Comayagüela",  "lat": 14.0940, "lon": -87.2170 },
+  { "nombre": "Estación Policial Kennedy",      "lat": 14.0870, "lon": -87.2250 },
+  { "nombre": "Estación Policial El Manchén",   "lat": 14.1050, "lon": -87.1850 }
+]

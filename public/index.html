@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Estaciones Policiales Más Cercanas</title>
+<style>
+  :root {
+    --azul: #1d4ed8;
+    --azul-osc: #1e3a8a;
+    --gris: #f3f4f6;
+    --texto: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--gris);
+    color: var(--texto);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  header h1 {
+    color: var(--azul-osc);
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+  header p {
+    color: #4b5563;
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 460px;
+  }
+  .campo {
+    margin-bottom: 14px;
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #374151;
+  }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--azul);
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.15);
+  }
+  .fila-doble {
+    display: flex;
+    gap: 12px;
+  }
+  .fila-doble .campo { flex: 1; }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--azul-osc); }
+  button:disabled { background: #9ca3af; cursor: not-allowed; }
+  button.secundario {
+    background: #fff;
+    color: var(--azul);
+    border: 1px solid var(--azul);
+    margin-top: 8px;
+  }
+  button.secundario:hover { background: #eff6ff; }
+  #resultado {
+    width: 100%;
+    max-width: 460px;
+    margin-top: 20px;
+  }
+  .estacion {
+    background: #fff;
+    border-left: 4px solid var(--azul);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .estacion .nombre {
+    font-weight: 600;
+    color: var(--azul-osc);
+  }
+  .estacion .coords {
+    font-size: 0.78rem;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+  .estacion .distancia {
+    font-weight: 700;
+    color: var(--azul);
+    white-space: nowrap;
+    margin-left: 12px;
+  }
+  .mensaje {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-top: 16px;
+  }
+  .error {
+    color: #b91c1c;
+    background: #fee2e2;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 14px;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚓 Estaciones Policiales Más Cercanas</h1>
+  <p>Ingresa tu ubicación y encuentra las 3 estaciones más cercanas</p>
+</header>
+
+<div class="card">
+  <div class="fila-doble">
+    <div class="campo">
+      <label for="lat">Latitud</label>
+      <input type="text" id="lat" placeholder="Ej: 14.0900" inputmode="decimal" />
+    </div>
+    <div class="campo">
+      <label for="lon">Longitud</label>
+      <input type="text" id="lon" placeholder="Ej: -87.2000" inputmode="decimal" />
+    </div>
+  </div>
+
+  <div class="campo">
+    <label for="limite">Cantidad de estaciones a mostrar</label>
+    <input type="number" id="limite" value="3" min="1" max="6" />
+  </div>
+
+  <button id="btnBuscar">Buscar</button>
+  <button id="btnUbicacion" class="secundario" type="button">📍 Usar mi ubicación actual</button>
+</div>
+
+<div id="resultado"></div>
+
+<script>
+  // URL de la función serverless. Como el frontend y la API se despliegan
+  // juntos en el mismo sitio de Netlify, se usa una ruta relativa.
+  const API_URL = "/.netlify/functions/estaciones";
+
+  const btnBuscar = document.getElementById("btnBuscar");
+  const btnUbicacion = document.getElementById("btnUbicacion");
+  const resultadoDiv = document.getElementById("resultado");
+
+  async function buscarEstaciones() {
+    const lat = document.getElementById("lat").value.trim();
+    const lon = document.getElementById("lon").value.trim();
+    const limite = document.getElementById("limite").value || 3;
+
+    if (lat === "" || lon === "") {
+      resultadoDiv.innerHTML = `<div class="error">Por favor ingresa latitud y longitud.</div>`;
+      return;
+    }
+
+    resultadoDiv.innerHTML = `<p class="mensaje">Buscando estaciones cercanas...</p>`;
+    btnBuscar.disabled = true;
+
+    try {
+      const url = `${API_URL}?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limite=${encodeURIComponent(limite)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!res.ok) {
+        resultadoDiv.innerHTML = `<div class="error">${data.error || "Ocurrió un error al consultar el servicio."}</div>`;
+        return;
+      }
+
+      mostrarResultados(data.estaciones_mas_cercanas);
+    } catch (err) {
+      resultadoDiv.innerHTML = `<div class="error">No se pudo conectar con el servicio. Intenta de nuevo.</div>`;
+    } finally {
+      btnBuscar.disabled = false;
+    }
+  }
+
+  function mostrarResultados(estaciones) {
+    if (!estaciones || estaciones.length === 0) {
+      resultadoDiv.innerHTML = `<p class="mensaje">No se encontraron estaciones.</p>`;
+      return;
+    }
+
+    resultadoDiv.innerHTML = estaciones
+      .map(
+        (e) => `
+        <div class="estacion">
+          <div>
+            <div class="nombre">${e.nombre}</div>
+            <div class="coords">${e.lat}, ${e.lon}</div>
+          </div>
+          <div class="distancia">${e.distancia_km} km</div>
+        </div>`
+      )
+      .join("");
+  }
+
+  btnBuscar.addEventListener("click", buscarEstaciones);
+
+  btnUbicacion.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      resultadoDiv.innerHTML = `<div class="error">Tu navegador no soporta geolocalización.</div>`;
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById("lat").value = pos.coords.latitude.toFixed(6);
+        document.getElementById("lon").value = pos.coords.longitude.toFixed(6);
+        buscarEstaciones();
+      },
+      () => {
+        resultadoDiv.innerHTML = `<div class="error">No se pudo obtener tu ubicación. Ingrésala manualmente.</div>`;
+      }
+    );
+  });
+</script>
+
+</body>
+</html>
